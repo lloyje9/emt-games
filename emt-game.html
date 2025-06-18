@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMT Responsibilities Sorter Game</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter for consistent typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <style>
+        /* Ensures the body and root div take up full height for the background gradient */
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex; /* Use flexbox to center content */
+            flex-direction: column;
+        }
+        #root {
+            flex-grow: 1; /* Allow root to grow and fill available space */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- React and ReactDOM CDNs -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Standard JavaScript script tag (no type="text/babel" needed now) -->
+    <script>
+        // Main App component for the EMT Responsibilities Sorter game
+        // All JSX has been converted to React.createElement calls
+
+        function App() {
+          console.log("EMT Sorter App component is rendering.");
+
+          // React Hooks (useState, useEffect) are now directly accessed via the global React object
+          const useState = React.useState;
+          const useEffect = React.useEffect;
+
+          // Define the categories for sorting and their matching responsibilities
+          const categories = [
+            {
+              id: 'emt-responsibilities',
+              name: 'EMT Responsibilities',
+              matches: [
+                'Maintain vehicle and equipment readiness',
+                'Ensure safety of the EMS crew, the patient, and bystanders at the scene',
+                'Operate the emergency vehicle',
+                'Assess the patient',
+                'Provide emergency care',
+                'Safely lift and move the patient',
+                'Prepare oral and written reports',
+                'Safely transport the patient',
+                'Transfer patient care',
+                'Perform record keeping and data collection',
+                'Serve as the patient’s advocate',
+                'Integrate the EMS service with other emergency and nonemergency services',
+                'Resolve the emergency incident',
+                'Maintain medical and legal standards',
+                'Provide administrative support',
+                'Enhance professional development',
+                'Develop and maintain community relations',
+              ],
+            },
+            {
+              id: 'not-emt-responsibilities',
+              name: 'NOT EMT Responsibilities',
+              matches: [
+                'Get to the patient as quickly as possible',
+                'Use any means to extricate the patient',
+                'Always have a patient self-extricate',
+                'Be brief when giving report',
+                'Resolve conflicts between patients and bystanders',
+                'Ensure your patients safety, first, in an unsafe scene',
+                'Allow all patients to decline medical care',
+                'Always let Fire or Police gather demographics',
+                'Bring every patient to the hospital of their choosing',
+                'Be the highest level of emergency medical care at all events',
+                'Forgo off-line protocols in emergent situations',
+              ],
+            },
+          ];
+
+          // Combine all responsibilities into a single list for initial shuffling
+          const allResponsibilities = [
+            ...categories[0].matches.map(name => ({ id: name.replace(/\s+/g, '-').toLowerCase(), name: name, type: 'emt' })),
+            ...categories[1].matches.map(name => ({ id: name.replace(/\s+/g, '-').toLowerCase(), name: name, type: 'not-emt' })),
+          ];
+
+          // Function to shuffle an array
+          const shuffleArray = (array) => {
+            let currentIndex = array.length, randomIndex;
+            // While there remain elements to shuffle.
+            while (currentIndex !== 0) {
+              // Pick a remaining element.
+              randomIndex = Math.floor(Math.random() * currentIndex);
+              currentIndex--;
+              // And swap it with the current element.
+              [array[currentIndex], array[randomIndex]] = [
+                array[randomIndex], array[currentIndex]];
+            }
+            return array;
+          };
+
+          // Initial state for draggable items (EMT responsibilities)
+          // 'initial' is the starting pool, other keys are category IDs
+          const initialItemsState = {
+            initial: shuffleArray([...allResponsibilities]), // Shuffle the combined list
+            'emt-responsibilities': [],
+            'not-emt-responsibilities': [],
+          };
+
+          // State to manage the items' current locations
+          const [items, setItems] = useState(initialItemsState);
+          // State to track if the game is won
+          const [gameWon, setGameWon] = useState(false);
+          // State to manage drop zone feedback (e.g., highlight on drag over)
+          const [draggingItem, setDraggingItem] = useState(null);
+
+          // useEffect to check for win condition whenever 'items' state changes
+          useEffect(() => {
+            checkWinCondition();
+          }, [items]);
+
+          // Function to handle the start of a drag operation
+          const handleDragStart = (e, itemId) => {
+            e.dataTransfer.setData('itemId', itemId);
+            setDraggingItem(itemId);
+          };
+
+          // Function to handle an item being dragged over a drop zone
+          const handleDragOver = (e) => {
+            e.preventDefault();
+          };
+
+          // Function to handle an item being dropped into a drop zone
+          const handleDrop = (e, categoryId) => {
+            e.preventDefault();
+            setDraggingItem(null);
+
+            const itemId = e.dataTransfer.getData('itemId');
+            if (!itemId) return;
+
+            let foundItem = null;
+            let oldCategory = null;
+
+            for (const key in items) {
+              const itemIndex = items[key].findIndex(item => item.id === itemId);
+              if (itemIndex !== -1) {
+                foundItem = items[key][itemIndex];
+                oldCategory = key;
+                break;
+              }
+            }
+
+            if (!foundItem || !oldCategory) return;
+            if (oldCategory === categoryId && categoryId !== 'initial') return;
+
+            const newItems = { ...items };
+            newItems[oldCategory] = newItems[oldCategory].filter(item => item.id !== itemId);
+            newItems[categoryId] = [...newItems[categoryId], foundItem];
+            setItems(newItems);
+          };
+
+          // Function to check if the game has been won
+          const checkWinCondition = () => {
+            let allCorrect = true;
+            for (const category of categories) {
+              const currentCategoryItemNames = items[category.id].map(item => item.name);
+              if (currentCategoryItemNames.length !== category.matches.length ||
+                  !category.matches.every(name => currentCategoryItemNames.includes(name))) {
+                allCorrect = false;
+                break;
+              }
+            }
+            if (items.initial.length > 0) {
+              allCorrect = false;
+            }
+            setGameWon(allCorrect);
+          };
+
+          // Function to reset the game to its initial state
+          const resetGame = () => {
+            const shuffledItems = shuffleArray([...allResponsibilities]);
+            setItems({
+              initial: shuffledItems,
+              'emt-responsibilities': [],
+              'not-emt-responsibilities': [],
+            });
+            setGameWon(false);
+          };
+
+          // Render the game UI using React.createElement
+          return React.createElement(
+            'div',
+            { className: "min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-gray-100 p-6 font-inter flex flex-col items-center justify-center" },
+            React.createElement('meta', { name: "viewport", content: "width=device-width, initial-scale=1.0" }),
+            React.createElement(
+              'h1',
+              { className: "text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-600 mb-8 drop-shadow-lg text-center" },
+              'EMT Responsibilities Sorter'
+            ),
+            React.createElement(
+              'p',
+              { className: "text-xl md:text-2xl text-gray-300 mb-10 text-center max-w-2xl" },
+              'Drag each task into the correct category: "EMT Responsibilities" or "NOT EMT Responsibilities"!'
+            ),
+            gameWon && React.createElement(
+              'div',
+              { className: "bg-green-600 text-white text-2xl md:text-3xl font-bold px-8 py-4 rounded-xl shadow-xl mb-8 animate-bounce transition-all duration-300 ease-in-out transform hover:scale-105" },
+              '🎉 Congratulations! You sorted all the responsibilities correctly! 🎉'
+            ),
+            React.createElement(
+              'div',
+              {
+                className: "w-full max-w-5xl bg-gray-700 bg-opacity-50 backdrop-blur-sm p-6 rounded-2xl shadow-xl mb-10 border border-gray-600 flex flex-wrap gap-4 justify-center",
+                onDragOver: handleDragOver,
+                onDrop: (e) => handleDrop(e, 'initial'),
+              },
+              React.createElement('h2', { className: "w-full text-2xl font-semibold text-gray-200 mb-4 text-center" }, 'Tasks to Sort:'),
+              items.initial.length === 0 && !gameWon && React.createElement(
+                'p',
+                { className: "text-gray-400" },
+                'Drag tasks from here into the categories below!'
+              ),
+              items.initial.map(item =>
+                React.createElement(
+                  'div',
+                  {
+                    key: item.id,
+                    draggable: true,
+                    onDragStart: (e) => handleDragStart(e, item.id),
+                    className: "cursor-grab bg-gradient-to-br from-purple-500 to-pink-600 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-2xl active:cursor-grabbing border-2 border-transparent text-sm md:text-base",
+                  },
+                  item.name
+                )
+              )
+            ),
+            React.createElement(
+              'div',
+              { className: "grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-6xl mb-10" },
+              categories.map(category => {
+                const currentDraggingItemData = allResponsibilities.find(item => item.id === draggingItem);
+                const isCorrectDropTarget = draggingItem && currentDraggingItemData &&
+                                            (currentDraggingItemData.type === 'emt' && category.id === 'emt-responsibilities' ||
+                                             currentDraggingItemData.type === 'not-emt' && category.id === 'not-emt-responsibilities');
+
+                const dropZoneBorderColor = isCorrectDropTarget ? 'border-green-400' : 'border-gray-600';
+                const dropZoneHoverColor = draggingItem ? 'hover:border-blue-400' : '';
+
+                return React.createElement(
+                  'div',
+                  {
+                    key: category.id,
+                    onDragOver: handleDragOver,
+                    onDrop: (e) => handleDrop(e, category.id),
+                    className: `min-h-[250px] bg-gray-700 bg-opacity-50 backdrop-blur-sm p-6 rounded-2xl shadow-xl border-4 ${dropZoneBorderColor} ${dropZoneHoverColor} transition-all duration-200 ease-in-out flex flex-col items-center text-center`,
+                  },
+                  React.createElement(
+                    'h2',
+                    { className: "text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-500 mb-4" },
+                    category.name
+                  ),
+                  React.createElement(
+                    'div',
+                    { className: "flex flex-wrap gap-3 justify-center mt-auto" },
+                    items[category.id].map(item => {
+                      const isItemCorrectlyPlaced = (item.type === 'emt' && category.id === 'emt-responsibilities') ||
+                                                    (item.type === 'not-emt' && category.id === 'not-emt-responsibilities');
+                      return React.createElement(
+                        'div',
+                        {
+                          key: item.id,
+                          draggable: true,
+                          onDragStart: (e) => handleDragStart(e, item.id),
+                          className: `cursor-grab py-2 px-4 rounded-md shadow-md text-sm font-medium transform transition-all duration-200 ease-in-out hover:scale-105 hover:shadow-xl active:cursor-grabbing border-2 ${isItemCorrectlyPlaced ? 'bg-green-500 border-green-700' : 'bg-red-500 border-red-700'} text-white`,
+                        },
+                        item.name
+                      );
+                    })
+                  )
+                );
+              })
+            ),
+            React.createElement(
+              'button',
+              {
+                onClick: resetGame,
+                className: "bg-red-700 hover:bg-red-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-red-500 focus:ring-opacity-50",
+              },
+              'Reset Game'
+            )
+          );
+        }
+
+        // Render the App component into the 'root' div
+        const rootElement = document.getElementById('root');
+        console.log("Root element found. Attempting to create React root.");
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(React.createElement(App, null));
+        console.log("React render function called.");
+    </script>
+</body>
+</html>
